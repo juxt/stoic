@@ -7,7 +7,7 @@
             [stoic.config.curator]
             [clojure.tools.logging :as log]))
 
-(defn- choose-supplier []
+(defn choose-supplier []
   (stoic.config.curator/config-supplier))
 
 (defn- inject-components
