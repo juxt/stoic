@@ -10,6 +10,8 @@
 (defn- choose-supplier []
   (stoic.config.curator/config-supplier))
 
+(def ^:dynamic *choose-supplier* choose-supplier)
+
 (defn- inject-components
   "Inject components associating in the respective settings as an atom.
    Returns a new SystemMap."
@@ -45,7 +47,7 @@
    Components will be bounced when their respective settings change.
    Returns a SystemMap with Stoic config attached."
   ([system]
-     (bootstrap (choose-supplier) system))
+     (bootstrap (*choose-supplier*) system))
   ([config-supplier system]
      (let [config-supplier-component (component/start config-supplier)
            component-settings (fetch-settings config-supplier-component system)
