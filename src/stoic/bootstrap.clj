@@ -17,10 +17,8 @@
   (apply component/system-map
          (reduce into []
                  (for [[k c] system]
-                   (do
-                     (when (:settings c) (println "IASDJASD" c))
-                     [k (or (and (:settings c) c)
-                            (assoc c :settings (get component-settings k)))])))))
+                   [k (or (and (:settings c) c)
+                          (assoc c :settings (get component-settings k)))]))))
 
 (defn- fetch-settings
   "Fetch settings from the config supplier and wrap in atoms."
