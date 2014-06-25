@@ -17,12 +17,16 @@
   (apply component/system-map
          (reduce into []
                  (for [[k c] system]
-                   [k (assoc c :settings (get component-settings k))]))))
+                   (do
+                     (when (:settings c) (println "IASDJASD" c))
+                     [k (or (and (:settings c) c)
+                            (assoc c :settings (get component-settings k)))])))))
 
 (defn- fetch-settings
   "Fetch settings from the config supplier and wrap in atoms."
   [config-supplier system]
-  (into {} (for [[k] system]
+  (into {} (for [[k c] system
+                 :when (not (:settings c))]
              [k (atom (cs/fetch config-supplier k))])))
 
 (defn- bounce-component! [config-supplier k c settings-atom]
@@ -36,7 +40,8 @@
   "Add watchers to config to bounce relevant component if config changes."
   [config-supplier components component-settings]
   (doseq [[k c] components
-          :let [settings-atom (get component-settings k)]]
+          :let [settings-atom (get component-settings k)]
+          :when settings-atom]
     (cs/watch! config-supplier k
                (partial bounce-component! config-supplier k c settings-atom))))
 
