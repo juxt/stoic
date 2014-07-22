@@ -4,11 +4,14 @@
             [stoic.components.foo]
             [stoic.protocols.config-supplier :as cs]
             [stoic.config.zk]
+            [stoic.config.file :as file]
             [stoic.config.curator]
             [clojure.tools.logging :as log]))
 
 (defn choose-supplier []
-  (stoic.config.curator/config-supplier))
+  (if (file/enabled?)
+    (file/config-supplier)
+    (stoic.config.curator/config-supplier)))
 
 (defn- inject-components
   "Inject components associating in the respective settings as an atom.
