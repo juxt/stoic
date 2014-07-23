@@ -20,4 +20,5 @@
 
                  [com.stuartsierra/component "0.2.1"]
                  [org.clojure/core.async "0.1.278.0-76b25b-alpha"]
-                 [curator "0.0.2"]])
+                 [curator "0.0.2"]
+                 [juxt/dirwatch "0.2.0"]])
