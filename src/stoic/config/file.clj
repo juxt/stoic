@@ -2,6 +2,7 @@
   "Loads stoic config from a file containing edn.The file is watched for changes and config is reloaded when they occur."
   (:import (java.nio.file AccessDeniedException))
   (:require [stoic.protocols.config-supplier]
+            [stoic.merge :refer [deep-merge]]
             [clojure.tools.logging :as log]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
@@ -24,11 +25,6 @@
     (*read-config-path*)
     true
     (catch IllegalArgumentException e false)))
-
-(defn- deep-merge [& maps]
-  (if (every? map? maps)
-    (apply merge-with deep-merge maps)
-    (last maps)))
 
 (defn read-config [config-files]
   "Reads the edn based config from the specified file"
@@ -65,8 +61,6 @@
     (let [config-paths (string/split (*read-config-path*) #":")
           config-files (config-files config-paths system-name)
           config-dirs  (set (map #(.getParentFile %) config-files))]
-      (println "Config files" config-files)
-      (println "Config dirs" config-dirs)
       (try
         (let [config-atom (atom (read-config config-files))
               watch-fn-atom (atom nil)

@@ -1,6 +1,6 @@
 (ns stoic.bootstrap-test
   (:use [clojure.core.async :only [chan timeout >!! <!! buffer alts!!]])
-  (:require [stoic.config.zk :as stoic-zk]
+  (:require [stoic.config.curator :as stoic-zk]
             [stoic.config.env :refer [zk-root]]
             [clojure.test :refer :all]
             [stoic.protocols.config-supplier :as cs]

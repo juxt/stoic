@@ -3,7 +3,6 @@
   (:require [com.stuartsierra.component :as component]
             [stoic.components.foo]
             [stoic.protocols.config-supplier :as cs]
-            [stoic.config.zk]
             [stoic.config.file :as file]
             [stoic.config.curator]
             [clojure.tools.logging :as log]))
