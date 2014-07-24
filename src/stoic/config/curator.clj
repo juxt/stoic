@@ -32,7 +32,7 @@
   (.. client checkExists watched (usingWatcher watcher)
       (forPath path)))
 
-(defrecord CuratorConfigSupplier [root]
+(defrecord CuratorConfigSupplier [root system-name]
   stoic.protocols.config-supplier/ConfigSupplier
   component/Lifecycle
 
@@ -61,5 +61,5 @@
                         (watcher-fn)
                         (watch-path client path this))))))))
 
-(defn config-supplier []
-  (CuratorConfigSupplier. (zk-root)))
+(defn config-supplier [system-name]
+  (CuratorConfigSupplier. (zk-root) system-name))

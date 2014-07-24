@@ -8,5 +8,5 @@
 (deftest can-write-and-read-from-zookeeper
   (let [expected {:a :b}
         zk (component/start (zk-config-supplier))]
-    (add-to-zk (connect) (path-for :default :foo) expected)
+    (add-to-zk (connect) (path-for (zk-root) :foo) expected)
     (is (= {:a :b} (cs/fetch zk :foo)))))

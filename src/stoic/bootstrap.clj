@@ -8,10 +8,10 @@
             [stoic.config.curator]
             [clojure.tools.logging :as log]))
 
-(defn choose-supplier []
+(defn build-config-supplier [system-name]
   (if (file/enabled?)
-    (file/config-supplier)
-    (stoic.config.curator/config-supplier)))
+    (file/config-supplier system-name)
+    (stoic.config.curator/config-supplier system-name)))
 
 (defn- inject-components
   "Inject components associating in the respective settings as an atom.
@@ -21,14 +21,18 @@
          (reduce into []
                  (for [[k c] system]
                    [k (or (and (:settings c) c)
+                          (when-not (associative? c) c)
                           (assoc c :settings (get component-settings k)))]))))
 
 (defn- fetch-settings
   "Fetch settings from the config supplier and wrap in atoms."
   [config-supplier system]
-  (into {} (for [[k c] system
-                 :when (not (:settings c))]
-             [k (atom (cs/fetch config-supplier k))])))
+  (let [system-settings (when-let [system-name (:name system)]
+                          {system-name (cs/fetch config-supplier (:name system))})]
+    (into {} (for [[k c] system
+                   :when (not (:settings c))]
+               [k (atom (merge system-settings
+                               (cs/fetch config-supplier k)))]))))
 
 (defn- bounce-component! [config-supplier k c settings-atom]
   (let [settings (cs/fetch config-supplier k)]
@@ -51,14 +55,11 @@
    Components will be bounced when their respective settings change.
    Returns a SystemMap with Stoic config attached."
   ([system]
-     (bootstrap (choose-supplier) system))
+     (bootstrap (build-config-supplier (:name system)) system))
   ([config-supplier system]
-     (println "system" system)
      (let [config-supplier-component (component/start config-supplier)
            component-settings (fetch-settings config-supplier-component system)
-           _ (println "settings" component-settings)
            system (inject-components component-settings system)]
-       (println "system" system)
        (bounce-components-if-config-changes!
         config-supplier-component system component-settings)
        (assoc system :stoic-config config-supplier-component))))

@@ -110,3 +110,18 @@
                                          [:test1]))))]
      (is (= :initial-value (first (alts!! [(timeout 2000) starts]))))
      (is (= :initial-value (first (alts!! [(timeout 2000) stops])))))))
+
+(deftest system-with-a-name-has-application-settings-merged
+  (harness
+   (stoic-zk/add-to-zk client (path-for (zk-root) :test1) {:a :test-1-value})
+   (stoic-zk/add-to-zk client (path-for (zk-root) :test-application) {:y :z})
+
+   (testing "Application settings are merged with component settings"
+     (let [system (component/start
+                   (b/bootstrap
+                    (component/system-map :name :test-application
+                                          :test1 (map->TestComponent {}))))]
+
+       (is (= :test-application (-> system :name)))
+       (is (= {:a :test-1-value
+               :test-application {:y :z}} (-> system :test1 :settings deref)))))))

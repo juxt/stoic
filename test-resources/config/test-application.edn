@@ -1,0 +1,2 @@
+{:test-application {:pqr :stu}
+ :http-kit {:threads 16}}

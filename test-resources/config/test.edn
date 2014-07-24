@@ -1,5 +1,2 @@
-{:sauron
-           {:consumer-portal-url "http://test.com:8080",
-            :storm-ui-url "http://test2.com:8080",
-            :media-url-prefix "http://images.test.com/"},
- :http-kit {:port 8080, :threads 4}}
+{:ptth-tik {:abc :def}
+ :http-kit {:port 8080 :threads 4}}
