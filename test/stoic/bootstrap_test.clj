@@ -1,6 +1,7 @@
 (ns stoic.bootstrap-test
   (:use [clojure.core.async :only [chan timeout >!! <!! buffer alts!!]])
   (:require [stoic.config.zk :as stoic-zk]
+            [stoic.config.env :refer [zk-root]]
             [clojure.test :refer :all]
             [stoic.protocols.config-supplier :as cs]
             [com.stuartsierra.component :as component]
@@ -25,7 +26,7 @@
 
 (deftest can-bounce-component-on-config-change
   (harness
-   (stoic-zk/add-to-zk client (path-for :default :test) {:a :initial-value})
+   (stoic-zk/add-to-zk client (path-for (zk-root) :test) {:a :initial-value})
 
    (let [starts (chan (buffer 1))
          stops (chan (buffer 1))]
@@ -35,19 +36,19 @@
 
      (is (= :initial-value (first (alts!! [(timeout 2000) starts]))))
 
-     (stoic-zk/add-to-zk client (path-for :default :test) {:a :b})
+     (stoic-zk/add-to-zk client (path-for (zk-root) :test) {:a :b})
 
      (is (= :initial-value (first (alts!! [(timeout 2000) stops]))))
      (is (= :b (first (alts!! [(timeout 2000) starts]))))
 
-     (stoic-zk/add-to-zk client (path-for :default :test) {:a :c})
+     (stoic-zk/add-to-zk client (path-for (zk-root) :test) {:a :c})
 
      (is (= :b (first (alts!! [(timeout 2000) stops]))))
      (is (= :c (first (alts!! [(timeout 2000) starts])))))))
 
 (deftest can-not-bounce-component-if-doesnt-change
   (harness
-   (stoic-zk/add-to-zk client (path-for :default :test) {:a :initial-value})
+   (stoic-zk/add-to-zk client (path-for (zk-root) :test) {:a :initial-value})
 
    (let [starts (chan (buffer 1))
          stops (chan (buffer 1))]
@@ -57,7 +58,7 @@
 
      (is (= :initial-value (first (alts!! [(timeout 2000) starts]))))
 
-     (stoic-zk/add-to-zk client (path-for :default :test) {:a :initial-value})
+     (stoic-zk/add-to-zk client (path-for (zk-root) :test) {:a :initial-value})
 
      (let [t-c (timeout 2000)
            [v c] (alts!! [t-c stops])]
@@ -77,8 +78,8 @@
 
 (deftest component-with-dependencies-get-injected
   (harness
-   (stoic-zk/add-to-zk client (path-for :default :test1) {:a :test-1-value})
-   (stoic-zk/add-to-zk client (path-for :default :test2) {:a :test-2-value})
+   (stoic-zk/add-to-zk client (path-for (zk-root) :test1) {:a :test-1-value})
+   (stoic-zk/add-to-zk client (path-for (zk-root) :test2) {:a :test-2-value})
 
    (let [system (component/start
                  (b/bootstrap
@@ -97,13 +98,13 @@
 
 (deftest components-are-shutdown-safely-if-component-fails-during-startup
   (harness
-   (stoic-zk/add-to-zk client (path-for :default :test1) {:a :initial-value})
+   (stoic-zk/add-to-zk client (path-for (zk-root) :test1) {:a :initial-value})
    (let [starts (chan (buffer 1))
          stops (chan (buffer 1))
          system
          (b/start-safely
           (b/bootstrap
-           (component/system-map :test1  (->TestAsyncComponent starts stops)
+           (component/system-map :test1 (->TestAsyncComponent starts stops)
                                  :test2 (component/using
                                          (map->TestBarfingComponent {})
                                          [:test1]))))]

@@ -20,4 +20,4 @@
   (let [am-config-path "./test-resources/config/test.edn"]
     (binding [*read-config-path* (constantly am-config-path)]
       (let [config (:config (component/start (->FileConfigSupplier)))]
-        (is (not= (:http-kit @config) nil))))))
+        (is (= {:port 8080 :threads 4} (:http-kit @config)))))))

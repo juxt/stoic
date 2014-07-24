@@ -53,9 +53,12 @@
   ([system]
      (bootstrap (choose-supplier) system))
   ([config-supplier system]
+     (println "system" system)
      (let [config-supplier-component (component/start config-supplier)
            component-settings (fetch-settings config-supplier-component system)
+           _ (println "settings" component-settings)
            system (inject-components component-settings system)]
+       (println "system" system)
        (bounce-components-if-config-changes!
         config-supplier-component system component-settings)
        (assoc system :stoic-config config-supplier-component))))
