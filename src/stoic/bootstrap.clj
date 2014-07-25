@@ -1,17 +1,16 @@
 (ns stoic.bootstrap
   "Bootstrap a component system with components and settings."
-  (:require [com.stuartsierra.component :as component]
-            [stoic.components.foo]
-            [stoic.protocols.config-supplier :as cs]
-            [stoic.config.zk]
+  (:require [clojure.tools.logging :as log]
+            [com.stuartsierra.component :as component]
             [stoic.config.file :as file]
-            [stoic.config.curator]
-            [clojure.tools.logging :as log]))
+            [stoic.protocols.config-supplier :as cs]))
 
 (defn choose-supplier []
   (if (file/enabled?)
     (file/config-supplier)
-    (stoic.config.curator/config-supplier)))
+    (do
+      (require 'stoic.config.curator)
+      ((resolve 'stoic.config.curator/config-supplier)))))
 
 (defn- inject-components
   "Inject components associating in the respective settings as an atom.
