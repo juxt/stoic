@@ -2,6 +2,7 @@
   "Loads stoic config from a file containing edn.The file is watched for changes and config is reloaded when they occur."
   (:import (java.nio.file AccessDeniedException))
   (:require [stoic.protocols.config-supplier]
+            [stoic.merge :refer [deep-merge]]
             [clojure.tools.logging :as log]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
@@ -25,41 +26,49 @@
     true
     (catch IllegalArgumentException e false)))
 
-(defn read-config [file-path]
+(defn read-config [config-files]
   "Reads the edn based config from the specified file"
-  (log/info "Reading config from file: " file-path)
-  (let [config (edn/read-string (slurp file-path))]
+  (log/info "Reading config from files: " (map #(.getAbsolutePath %) config-files))
+  (let [config (apply deep-merge (map #(edn/read-string (slurp %)) config-files))]
     (log/debug "Config: " config)
     config))
 
-(defn- config-file-change? [config-path f]
+(defn- config-file-change? [config-files f]
   "Filter out all file system events that do not match the stoic config file modification or creation"
-  (and (= config-path (.getAbsolutePath (:file f))) (not= (:action f) :delete)))
+  (and (contains? (set config-files) (:file f)) (not= (:action f) :delete)))
 
-(defn reload-config! [config-atom config-path watch-fn-atom file-events]
+(defn reload-config! [config-atom config-files watch-fn-atom file-events]
   "If the stoic config file has changed, reload the config and call the optional watch function"
-  (when (not-empty (filter (partial config-file-change? config-path) file-events))
+  (when (not-empty (filter (partial config-file-change? config-files) file-events))
     (log/info "Reloading config...")
-    (reset! config-atom (read-config config-path))
+    (reset! config-atom (read-config config-files))
     (when @watch-fn-atom
       (@watch-fn-atom))))
 
-(defrecord FileConfigSupplier []
+(defn- config-files [config-paths system-name]
+  (for [path config-paths
+        :let [f (io/file path)]]
+    (if (.isDirectory f)
+      (let [system-settings (io/file f (str (name system-name) ".edn"))]
+        (when (.exists system-settings) system-settings))
+      f)))
+
+(defrecord FileConfigSupplier [system-name]
   stoic.protocols.config-supplier/ConfigSupplier
   component/Lifecycle
 
   (start [this]
-    (let [config-path (*read-config-path*)
-          config-dir (.getParentFile (io/as-file config-path))]
+    (let [config-paths (string/split (*read-config-path*) #":")
+          config-files (config-files config-paths system-name)
+          config-dirs  (set (map #(.getParentFile %) config-files))]
       (try
-        (let [
-               config-atom (atom (read-config config-path))
-               watch-fn-atom (atom nil)
-               config-watcher (watch-dir (partial reload-config! config-atom config-path watch-fn-atom) config-dir)]
+        (let [config-atom (atom (read-config config-files))
+              watch-fn-atom (atom nil)
+              config-watcher (apply watch-dir (partial reload-config! config-atom config-files watch-fn-atom) config-dirs)]
           (assoc this :config config-atom :config-watcher config-watcher :watch-fn watch-fn-atom))
         (catch AccessDeniedException e
           (do
-            (log/fatal "Unable to assign watcher to directory " (.getAbsolutePath config-dir) " check permissions")
+            (log/fatal "Unable to assign watcher to directories " (map #(.getAbsolutePath %) config-dirs) " check permissions")
             (throw e))))))
 
   (stop [this]
@@ -73,5 +82,5 @@
   (watch! [{:keys [watch-fn]} k watcher-function]
     (reset! watch-fn watcher-function)))
 
-(defn config-supplier []
-  (FileConfigSupplier.))
+(defn config-supplier [system-name]
+  (FileConfigSupplier. system-name))

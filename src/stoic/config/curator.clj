@@ -4,6 +4,7 @@
             [stoic.protocols.config-supplier]
             [stoic.config.data :refer :all]
             [stoic.config.env :refer :all]
+            [stoic.merge :refer [deep-merge]]
             [com.stuartsierra.component :as component]
             [clojure.tools.logging :as log]
             [stoic.config.exhibitor :refer :all])
@@ -32,7 +33,21 @@
   (.. client checkExists watched (usingWatcher watcher)
       (forPath path)))
 
-(defrecord CuratorConfigSupplier [root]
+(defn- safe-read [client path]
+  (when-not (.. client checkExists (forPath path))
+    (.. client create (forPath path nil)))
+  (read-from-zk client path))
+
+(defn- register-watch [client path watcher-fn]
+  (watch-path client path
+              (reify CuratorWatcher
+                (process [this event]
+                  (when (= :NodeDataChanged (keyword (.. event getType name)))
+                    (log/info "Data changed, firing watcher" event)
+                    (watcher-fn)
+                    (watch-path client path this))))))
+
+(defrecord CuratorConfigSupplier [root system-name]
   stoic.protocols.config-supplier/ConfigSupplier
   component/Lifecycle
 
@@ -46,20 +61,10 @@
     this)
 
   (fetch [{:keys [client]} k]
-    (let [path (path-for root k)]
-      (when-not (.. client checkExists (forPath path))
-        (.. client create (forPath path nil)))
-      (read-from-zk client path)))
+    (safe-read client (path-for root k)))
 
   (watch! [{:keys [client]} k watcher-fn]
-    (let [path (path-for root k)]
-      (watch-path client path
-                  (reify CuratorWatcher
-                    (process [this event]
-                      (when (= :NodeDataChanged (keyword (.. event getType name)))
-                        (log/info "Data changed, firing watcher" event)
-                        (watcher-fn)
-                        (watch-path client path this))))))))
+    (register-watch client (path-for root k) watcher-fn)))
 
-(defn config-supplier []
-  (CuratorConfigSupplier. (zk-root)))
+(defn config-supplier [system-name]
+  (CuratorConfigSupplier. (zk-root) system-name))
